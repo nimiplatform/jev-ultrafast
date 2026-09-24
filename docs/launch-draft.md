@@ -1,3 +1,10 @@
+> [!NOTE]
+> **Upstream history, not a Nimi metric.** These figures come from the upstream TypeSafe-direct build
+> (one combined operation/target request per decision, keys held by Python, the user's Chrome profile).
+> The Nimi adaptation asks one or two `text.decide` calls per decision through the Host in a dedicated
+> Chrome; it has no end-to-end model measurement yet (NOT-VERIFIED). The live and recording scripts named
+> here are in the upstream repository history.
+
 # Tweet draft
 
 browser agents should move like this

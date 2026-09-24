@@ -1,14 +1,13 @@
+// The inspector talks only to an injected transport (provided by the Nimi Host; static/dev-transport.mjs
+// is a dev-only fake for tests):
+//   window.jevTransport.command(name, body) -> Promise<state>, rejecting with an Error carrying .code
+//   window.jevTransport.onState(listener)  -> the worker's state events (start, progress, stop, end)
 const $ = (id) => document.getElementById(id);
-const token = document.querySelector('meta[name="demo-token"]').content;
+const transport = window.jevTransport;
 let state = null,
-  busy = false,
-  automatic = false;
-const goals = {
-  flights: 'Find one-way flights from Zurich to London on September 20, 2026, for one adult in economy. Stop when matching flight options are visible. Do not select or book a flight.',
-  travel: 'Find a Design stay in Lisbon with Free cancellation and open Casa Flora.',
-  research:
-    "Open the article about using finite choices to control browser agents.",
-};
+  busy = null,
+  stopping = false,
+  customUrl = "";
 const escape = (value) =>
   String(value ?? "").replace(
     /[&<>"']/g,
@@ -17,83 +16,133 @@ const escape = (value) =>
         c
       ],
   );
-const percent = (value) => `${(value * 100).toFixed(value < 0.01 ? 1 : 0)}%`;
+const percent = (value) =>
+  typeof value === "number" && Number.isFinite(value)
+    ? `${(value * 100).toFixed(value < 0.01 ? 1 : 0)}%`
+    : "—";
+const callCount = (n) => `${n ?? 0} call${n === 1 ? "" : "s"}`;
+const targetText = (decision, probability) =>
+  decision?.target_decision === "single_candidate" ? "only option" : percent(probability);
 async function call(name, body = {}) {
-  const response = await fetch(`/api/${name}`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json", "X-Demo-Token": token },
-    body: JSON.stringify(body),
-  });
-  const data = await response.json();
-  if (!response.ok) throw Error(data.error || "Request failed");
+  const data = await transport.command(name, body);
   state = data;
   render();
   return data;
 }
+function isWebAddress(value) {
+  try {
+    const url = new URL(value);
+    return ["http:", "https:"].includes(url.protocol) && Boolean(url.hostname);
+  } catch {
+    return false;
+  }
+}
+function showError(message) {
+  $("error").textContent = message;
+  $("error").hidden = false;
+}
+function applyScenario() {
+  const scenario = $("scenario").value;
+  const preset = state?.presets?.[scenario];
+  if (scenario === "custom") {
+    $("start-url").value = customUrl;
+    $("start-url").placeholder = "https://example.com/";
+    return;
+  }
+  $("start-url").value = preset?.url || "";
+  $("start-url").placeholder = preset?.fixture ? "Local fixture page served by the worker" : "";
+  if (preset) $("goal").value = preset.goal;
+}
 function controls() {
+  const locked = Boolean(busy || state?.busy);
   const live = state?.page && !["done", "blocked"].includes(state.status);
-  $("start").disabled = busy;
-  $("scenario").disabled = busy;
-  $("goal").disabled = busy;
-  $("choose").disabled = busy || !live;
-  $("execute").disabled = busy || !state?.decision || !live;
-  $("auto").disabled = busy || !live;
-  $("auto").hidden = automatic;
-  $("stop").hidden = !automatic;
+  $("start").disabled = locked;
+  $("scenario").disabled = locked;
+  $("goal").disabled = locked;
+  $("start-url").disabled = locked || $("scenario").value !== "custom";
+  $("choose").disabled = locked || !live;
+  $("execute").disabled = locked || !state?.decision || !live;
+  $("auto").disabled = locked || !live;
+  $("auto").hidden = (busy || state?.busy) === "auto";
+  $("stop").hidden = !locked;
+  $("stop").disabled = stopping;
   $("download").disabled = !state?.history?.length;
 }
-async function perform(fn, label) {
-  if (busy) return;
-  busy = true;
+async function perform(name, fn, label) {
+  if (busy || state?.busy) return;
+  busy = name;
+  stopping = false;
   $("error").hidden = true;
   controls();
   $("status").textContent = label;
+  let failure = null;
   try {
     await fn();
   } catch (error) {
-    automatic = false;
+    failure = error;
     try {
-      state = await fetch("/api/state").then((r) => r.json());
-      render();
+      state = await transport.command("state");
     } catch {
-      /* Preserve the original failure if the server disconnected. */
+      /* Preserve the original failure if the worker disconnected. */
     }
-    $("error").textContent = error.message;
-    $("error").hidden = false;
+  }
+  busy = null;
+  stopping = false;
+  if (state) render();
+  else controls();
+  // A stop or a canceled request is not a failure: pending results were discarded and nothing executed.
+  if (failure && !["stopped", "canceled"].includes(failure.code)) {
+    showError(failure.message || String(failure));
     $("status").textContent = "Paused · needs attention";
-  } finally {
-    busy = false;
-    controls();
   }
 }
 function render() {
   if (!state) return;
   $("helper").textContent = `Text helper · ${state.text_model}`;
+  // A DONE goal gets a check mark only when the independent check passed; otherwise it stays the model's claim.
+  const doneMark = state.status === "done" && state.verification?.passed === true ? "✓" : "?";
   $("plan").innerHTML = (state.plan || [])
     .map(
       (goal, i) =>
-        `<div class="plan-step ${i === state.plan_index ? "current" : ""}"><span>${i < state.plan_index ? "✓" : i + 1}</span>${escape(goal)}</div>`,
+        `<div class="plan-step ${i === state.plan_index ? "current" : ""}"><span>${i < state.plan_index ? doneMark : i + 1}</span>${escape(goal)}</div>`,
     )
     .join("");
   const page = state.page,
     d =
       state.decision ||
       (state.status === "done" ? state.decisions?.at(-1) : null);
+  const check = state.status === "done" ? state.verification : null;
+  const outcome =
+    check?.passed === true
+      ? "independent check passed"
+      : check?.passed === false
+        ? "independent check failed"
+        : "not independently verified";
   const labels = {
     idle: "Ready to explore",
     ready: "Page observed · ready for a decision",
     predicted: "Choice ready · inspect or execute",
-    done: "Jev reports complete · inspect the page",
-    blocked: "Stopped · no supported next action",
+    stopped: "Stopped · choose next or run again to observe afresh",
+    done: `Model reports DONE · ${outcome}`,
+    blocked: state.blocked_reason ? `Blocked · ${state.blocked_reason}` : "Stopped · no supported next action",
   };
-  $("status").textContent = labels[state.status] || state.status;
+  // While a command runs, keep its progress label; a reloaded inspector shows the worker's busy command.
+  if (!busy)
+    $("status").textContent = state.busy ? `Working · ${state.busy}…` : labels[state.status] || state.status;
+  $("verification").hidden = !check;
+  $("verification").className = `verification ${check?.passed === true ? "passed" : check?.passed === false ? "failed" : ""}`;
+  $("verification").textContent = check
+    ? check.passed === null
+      ? "DONE is the model's claim"
+      : `Independent check ${check.passed ? "passed" : "failed"}`
+    : "";
   if (!page) {
     controls();
     return;
   }
   $("empty").hidden = true;
-  $("screenshot").hidden = false;
-  $("screenshot").src = `data:image/jpeg;base64,${page.screenshot}`;
+  $("screenshot").hidden = !page.screenshot;
+  if (page.screenshot) $("screenshot").src = `data:image/jpeg;base64,${page.screenshot}`;
   $("url").textContent = page.url;
   $("page-title").textContent = page.title;
   $("action-count").textContent = `${state.elements.length} elements`;
@@ -102,14 +151,15 @@ function render() {
     ? chosen?.label || d.choice
     : "Choose an action";
   $("latency").textContent = d ? `${d.latency_ms} ms` : "—";
-  $("confidence").textContent = d?.target_confidence != null ? percent(d.target_confidence) : "—";
+  $("confidence").textContent = d ? targetText(d, d.target_probability) : "—";
   $("completion").textContent = d ? d.operation : "—";
-  $("ranking-note").textContent = d ? "Ranked by Jev" : "Unranked";
+  $("ranking-note").textContent = d ? `Ranked by ${state.decision_model} · ${callCount(d.calls)}` : "Unranked";
   const op = Object.entries(d?.operation_probabilities || {}).sort((a,b)=>b[1]-a[1]);
   $("operation-choices").innerHTML = op.map(([name,p]) =>
     `<span class="operation-choice ${name === d.operation ? 'best' : ''}">${escape(name)} <b>${percent(p)}</b></span>`).join('');
-  const probability = e => d?.target_probabilities[e.index] ??
-    Math.max(-1, ...(e.options || []).map(o=>d?.target_probabilities[o.index] ?? -1));
+  const probabilities = d?.target_probabilities || {};
+  const probability = e => probabilities[e.index] ??
+    Math.max(-1, ...(e.options || []).map(o=>probabilities[o.index] ?? -1));
   const selectedIndex = d?.target?.split(':')[0];
   const elements = [...state.elements];
   if (d) elements.sort((a,b)=>probability(b)-probability(a));
@@ -128,7 +178,7 @@ function render() {
     ? state.history
         .map(
           (h) =>
-            `<div class="trace-row"><span class="number">${String(h.step).padStart(2, "0")}</span><div>${escape(h.action)}${h.text ? ` <b>“${escape(h.text)}”</b><small>${escape(h.text_helper)}</small>` : ""}</div><span class="time">${h.latency_ms} ms · ${percent(h.probability)}</span><span class="effect">${h.page_changed ? "Page changed" : "No change observed"}</span></div>`,
+            `<div class="trace-row"><span class="number">${String(h.step).padStart(2, "0")}</span><div>${escape(h.action)}${h.text ? ` <b>“${escape(h.text)}”</b><small>${escape(h.text_helper)}</small>` : ""}</div><span class="time">${h.latency_ms} ms · ${callCount(h.decision_calls)} · ${targetText(h, h.probability)}</span><span class="effect">${h.page_changed ? "Page changed" : "No change observed"}</span></div>`,
         )
         .join("")
     : '<p class="muted">Each executed action leaves an observed result.</p>';
@@ -147,48 +197,54 @@ function render() {
 }
 $("task-form").addEventListener("submit", (event) => {
   event.preventDefault();
-  automatic = false;
-  perform(
-    () =>
-      call("reset", { scenario: $("scenario").value, goal: $("goal").value }),
-    "Opening a fresh browser…",
-  );
+  const scenario = $("scenario").value,
+    goal = $("goal").value;
+  if (scenario !== "custom") {
+    perform("preset", () => call("preset", { scenario, goal }), "Opening a fresh automation tab…");
+    return;
+  }
+  const url = $("start-url").value.trim();
+  if (!isWebAddress(url)) {
+    showError("Enter a start URL that begins with http:// or https://.");
+    return;
+  }
+  perform("start", () => call("start", { url, goal }), "Opening the start URL in the automation browser…");
 });
 $("scenario").addEventListener("change", () => {
-  $("goal").value = goals[$("scenario").value];
+  applyScenario();
+  controls();
+});
+$("start-url").addEventListener("input", () => {
+  if ($("scenario").value === "custom") customUrl = $("start-url").value;
 });
 $("choose").addEventListener("click", () =>
-  perform(() => call("predict"), "Jev is comparing the actions…"),
+  perform("predict", () => call("predict"), "Choosing the operation, then its element…"),
 );
 $("execute").addEventListener("click", () =>
   perform(
+    "act",
     () => call("act", { fingerprint: state.page.fingerprint }),
     "Executing the choice…",
   ),
 );
 $("auto").addEventListener("click", () =>
-  perform(async () => {
-    automatic = true;
-    controls();
-    for (let i = 0; i < state.max_steps * 2 && automatic; i++) {
-      $("status").textContent = "Running…";
-      if ($("pace").checked) {
-        await call("predict");
-        await new Promise(resolve => setTimeout(resolve, 450));
-        if (!automatic) break;
-        await call("act", {fingerprint: state.page.fingerprint});
-      } else {
-        await call("tick");
-      }
-      if (["done", "blocked"].includes(state.status)) break;
-    }
-    automatic = false;
-  }, "Running the browser…"),
+  perform("auto", () => call("auto", { pace: $("pace").checked }), "Running…"),
 );
 $("stop").addEventListener("click", () => {
-  automatic = false;
-  $("status").textContent = "Pausing after the current request…";
+  if (stopping) return;
+  stopping = true;
+  $("status").textContent = "Stopping · a late model result will be discarded…";
   controls();
+  transport.command("stop").then(
+    (next) => {
+      if (!busy) {
+        stopping = false;
+        state = next;
+        render();
+      }
+    },
+    (error) => showError(error?.message || String(error)),
+  );
 });
 $("overlays").addEventListener("change", () => {
   $("targets").hidden = !$("overlays").checked;
@@ -229,16 +285,30 @@ $("download").addEventListener("click", () => {
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;
-  a.download = "typesafe-browser-trace.json";
+  a.download = "jev-browser-trace.json";
   a.click();
   URL.revokeObjectURL(url);
 });
-fetch("/api/state")
-  .then((r) => r.json())
-  .then((s) => {
-    state = s;
+if (!transport) {
+  $("status").textContent = "Cannot reach the local worker";
+} else {
+  transport.onState((next) => {
+    state = next;
     render();
-  })
-  .catch(() => {
-    $("status").textContent = "Cannot reach local demo server";
   });
+  transport.command("state").then(
+    (initial) => {
+      state = initial;
+      if (state.goal) {
+        $("scenario").value = state.scenario || "custom";
+        $("goal").value = state.goal;
+      } else {
+        applyScenario();
+      }
+      render();
+    },
+    () => {
+      $("status").textContent = "Cannot reach the local worker";
+    },
+  );
+}

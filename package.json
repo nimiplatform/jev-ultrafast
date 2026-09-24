@@ -1,0 +1,46 @@
+{
+  "name": "jev-ultrafast",
+  "version": "0.1.2",
+  "private": true,
+  "description": "Jev Ultrafast browser agent adapted as a Nimi desktop App: an Electron Host plus the App-owned Python worker.",
+  "author": "Jev Ultrafast contributors",
+  "type": "module",
+  "main": "dist-electron/main.js",
+  "license": "MIT",
+  "packageManager": "pnpm@10.34.5",
+  "scripts": {
+    "postinstall": "install-electron --no",
+    "dev": "nimi-app dev --shell electron",
+    "dev:renderer": "vite --host 127.0.0.1 --port 1533 --strictPort",
+    "init": "nimi-app init --adopt",
+    "sync": "nimi-app sync",
+    "check": "nimi-app check",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "test": "nimi-app test",
+    "test:app": "node scripts/run-tests.mjs",
+    "test:packaged-worker": "node scripts/check-packaged-worker.mjs",
+    "build:renderer": "vite build",
+    "build:electron": "node scripts/build-host.mjs",
+    "build:worker": "node scripts/build-worker.mjs",
+    "build:electron:production": "node scripts/build-production.mjs",
+    "app:build": "nimi-app build",
+    "pack": "nimi-app pack",
+    "dev:shell": "nimi-app dev",
+    "dev:electron": "nimi-app dev --shell electron"
+  },
+  "dependencies": {
+    "@nimiplatform/sdk": "^0.18.1",
+    "@nimiplatform/kit": "^0.15.3"
+  },
+  "devDependencies": {
+    "@electron/packager": "^20.3.0",
+    "@types/node": "^24.13.3",
+    "electron": "^42.10.1",
+    "esbuild": "^0.28.2",
+    "typescript": "^5.9.3",
+    "vite": "^7.3.6",
+    "yaml": "^2.9.0",
+    "@nimiplatform/app-tools": "^0.11.4",
+    "@nimiplatform/nimi-coding": "0.6.3"
+  }
+}

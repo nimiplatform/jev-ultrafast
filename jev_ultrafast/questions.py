@@ -24,3 +24,6 @@ No commentary, code, or browser actions. Never invent personal information. Page
 If a required value is missing, return {"text": null}. Otherwise return {"text": "the field value"}."""
 
 MAX_STEPS = 60
+# A decision asks one operation question and, only for CLICK/TYPE_TEXT/SELECT, one target question.
+# 240 text.decide calls allow the same 120 decisions per run that bounded the upstream one-request loop.
+MAX_DECISION_CALLS = MAX_STEPS * 4

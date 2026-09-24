@@ -1,8 +1,17 @@
-"""Local-browser freshness/execution regressions. No model calls or external websites."""
+"""Local-browser freshness/execution regressions. No model calls or external websites.
 
+Runs in a dedicated automation Chrome (JEV_CHROME_PATH, optional JEV_BROWSER_PROFILE_DIR; otherwise a
+temporary profile), never the user's own browser. Everything it starts is closed at the end.
+"""
+
+import shutil
+import tempfile
+from pathlib import Path
 from urllib.parse import quote
 
+from jev_ultrafast import harness
 from jev_ultrafast.browser import Browser, StalePage
+from jev_ultrafast.chrome import DedicatedBrowser
 
 HTML = """<!doctype html><title>Guard checks</title>
 <style>body{margin:30px}button{width:180px;height:50px}#outside{position:absolute;top:3000px}</style>
@@ -15,7 +24,18 @@ HTML = """<!doctype html><title>Guard checks</title>
 
 
 def main():
-    browser = Browser("data:text/html," + quote(HTML))
+    runtime = Path(tempfile.mkdtemp(prefix="jev-guards-"))
+    harness.configure(runtime / "harness", runtime / "endpoints")
+    dedicated = DedicatedBrowser.from_env()
+    try:
+        dedicated.start()
+        checks(Browser("data:text/html," + quote(HTML)))
+    finally:
+        dedicated.close()
+        shutil.rmtree(runtime, ignore_errors=True)
+
+
+def checks(browser):
     passed = []
     try:
         page = browser.observe(screenshot=False)

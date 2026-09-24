@@ -3,16 +3,13 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width,initial-scale=1" />
-    <meta name="demo-token" content="__TOKEN__" />
     <title>Jev Ultrafast · Browser Use</title>
     <link rel="stylesheet" href="https://rsms.me/inter/inter.css" />
-    <link rel="stylesheet" href="/style.css" />
+    <link rel="stylesheet" href="./style.css" />
   </head>
   <body>
     <header>
-      <a href="/" aria-label="Homepage" class="brand"
-        >browser<span>use</span> <i>×</i> TypeSafe</a
-      >
+      <span class="brand">browser<span>use</span> <i>×</i> Nimi</span>
       <div class="local"><span class="dot"></span> Jev Ultrafast</div>
     </header>
     <main>
@@ -21,33 +18,45 @@
           <p class="eyebrow">A BROWSER THAT CHOOSES</p>
           <h1>Every page is a set of possibilities.</h1>
           <p>
-            Jev picks the next action. A small language model handles the words.
-            <a href="/demo.mp4" target="_blank" rel="noopener">Watch the real Google Flights run ↗</a>
+            A decision model picks the next operation, then its element. A text model writes field values.
+            Actions run in a dedicated automation Chrome, never your own profile.
           </p>
         </div>
-        <div class="model-tag">jev-latest <span>+ text helper</span></div>
+        <div class="model-tag">text.decide <span>+ text.generate</span></div>
       </section>
       <form id="task-form">
         <div class="task-label">
           <label for="goal">Give it a task</label
-          ><select id="scenario" name="scenario" aria-label="Demo scenario">
-            <option value="flights">Google Flights · real web</option>
+          ><select id="scenario" name="scenario" aria-label="Task source">
+            <option value="custom">Start URL · your goal</option>
+            <option value="flights" selected>Google Flights · real web</option>
             <option value="travel">Travel planner · fixture</option>
             <option value="research">Reading room · fixture</option>
           </select>
         </div>
+        <div class="url-row">
+          <label for="start-url">Start URL</label
+          ><input
+            id="start-url"
+            name="start-url"
+            type="url"
+            inputmode="url"
+            autocomplete="off"
+            spellcheck="false"
+            placeholder="https://example.com/"
+          />
+        </div>
         <div class="task-row">
-          <textarea id="goal" name="goal" rows="5">
-Find one-way flights from Zurich to London on September 20, 2026, for one adult in economy. Stop when matching flight options are visible. Do not select or book a flight.</textarea
+          <textarea id="goal" name="goal" rows="5" placeholder="Describe the goal. The start URL only opens the first page."></textarea
           ><button type="submit" id="start" class="primary">
-            Start demo <span>↗</span>
+            Start <span>↗</span>
           </button>
         </div>
       </form>
       <div class="toolbar">
         <div class="status">
           <span class="dot" id="status-dot"></span
-          ><span id="status" role="status">Ready to explore</span>
+          ><span id="status" role="status">Connecting to the worker…</span>
         </div>
         <div class="controls"><label class="overlay-control"><input name="pace" id="pace" type="checkbox"> Slow motion</label>
           <label class="overlay-control"
@@ -56,7 +65,7 @@ Find one-way flights from Zurich to London on September 20, 2026, for one adult 
           ><button type="button" id="choose" disabled>Choose next</button
           ><button type="button" id="execute" disabled>Execute choice</button
           ><button type="button" id="auto" disabled>Run automatically</button
-          ><button type="button" id="stop" hidden>Pause</button>
+          ><button type="button" id="stop" hidden>Stop</button>
         </div>
       </div>
       <div id="error" role="alert" hidden></div>
@@ -64,7 +73,7 @@ Find one-way flights from Zurich to London on September 20, 2026, for one adult 
         <div class="browser-panel">
           <div class="browser-bar">
             <div class="traffic"><b></b><b></b><b></b></div>
-            <span id="url">Local demo browser</span
+            <span id="url">Dedicated automation browser</span
             ><span class="live">LIVE</span>
           </div>
           <div class="viewport" id="viewport">
@@ -84,8 +93,8 @@ Find one-way flights from Zurich to London on September 20, 2026, for one adult 
             <div id="targets"></div>
           </div>
           <div class="browser-footer">
-            <span id="page-title">Isolated demo tab</span
-            ><span>AX tree → typed actions → CDP</span>
+            <span id="page-title">Isolated automation tab</span
+            ><span>DOM snapshot → typed actions → CDP</span>
           </div>
         </div>
         <aside>
@@ -100,7 +109,7 @@ Find one-way flights from Zurich to London on September 20, 2026, for one adult 
           <div class="metrics">
             <div><span>Decision time</span><strong id="latency">—</strong></div>
             <div>
-              <span>Target confidence</span><strong id="confidence">—</strong>
+              <span>Target probability</span><strong id="confidence">—</strong>
             </div>
             <div>
               <span>Operation</span
@@ -116,13 +125,14 @@ Find one-way flights from Zurich to London on September 20, 2026, for one adult 
             <p class="muted">Available actions will appear here.</p>
           </div>
           <p class="aside-note">
-            Operation and target are separate choices in one request.<br />Text is generated only for TYPE_TEXT.
+            One question picks the operation; a second picks its element only when one is needed.<br />Text is
+            generated only for TYPE_TEXT.
           </p>
         </aside>
       </section>
       <section class="trace">
         <div class="trace-heading">
-          <h2>Decision trail <span id="step-count">0 actions</span></h2>
+          <h2>Decision trail <span id="step-count">0 actions</span><span id="verification" class="verification" hidden></span></h2>
           <button type="button" id="download" disabled>Export trace ↓</button>
         </div>
         <div id="history">
@@ -132,13 +142,13 @@ Find one-way flights from Zurich to London on September 20, 2026, for one adult 
       <details>
         <summary>What the model sees</summary>
         <pre id="model-state">
-Start a demo to inspect its structured state.</pre>
+Start a task to inspect its structured state.</pre>
       </details>
       <footer>
-        <span>Browser Use × TypeSafe · Experimental baseline</span
+        <span>Jev Ultrafast (Browser Use, MIT) · Nimi adaptation · Experimental</span
         ><span id="helper">Text helper loading</span>
       </footer>
     </main>
-    <script type="module" src="/app.js"></script>
+    <script type="module" src="./app.js"></script>
   </body>
 </html>

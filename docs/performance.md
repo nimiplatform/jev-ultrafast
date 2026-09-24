@@ -1,3 +1,10 @@
+> [!NOTE]
+> **Upstream history, not a Nimi metric.** These figures come from the upstream TypeSafe-direct build
+> (one combined operation/target request per decision, keys held by Python, the user's Chrome profile).
+> The Nimi adaptation asks one or two `text.decide` calls per decision through the Host in a dedicated
+> Chrome; it has no end-to-end model measurement yet (NOT-VERIFIED). The live and recording scripts named
+> here are in the upstream repository history.
+
 # Faster on the real web
 
 The current video completes the Google Flights task in **7.073 seconds at 1×**. It starts with one natural-language goal and uses dynamic controls throughout. Jev selects operation + target in one request; Mercury generates the city strings when TYPE_TEXT is selected.

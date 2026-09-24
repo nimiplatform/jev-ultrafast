@@ -1,0 +1,11 @@
+packages:
+  - .
+onlyBuiltDependencies:
+  - electron
+  - esbuild
+  - protobufjs
+overrides:
+  '@nimiplatform/app-tools': file:D:/nimi-realm/nimi-apps/.local/nimi-packages/dev-textdecide-0924e/nimiplatform-app-tools-0.11.4.tgz
+  '@nimiplatform/sdk': file:D:/nimi-realm/nimi-apps/.local/nimi-packages/dev-textdecide-0924e/nimiplatform-sdk-0.18.1.tgz
+  '@nimiplatform/kit': file:D:/nimi-realm/nimi-apps/.local/nimi-packages/dev-textdecide-0924e/nimiplatform-kit-0.15.3.tgz
+  '@nimiplatform/kit-protected-local-win32-x64': file:D:/nimi-realm/nimi-apps/.local/nimi-packages/dev-textdecide-0924e/nimiplatform-kit-protected-local-win32-x64-0.15.3.tgz

@@ -1,0 +1,8 @@
+app_id: io.github.nimiplatform.jev-ultrafast
+display_name: Jev Ultrafast
+version: 0.1.2
+npm_package_name: jev-ultrafast
+cargo_package_name: jev-ultrafast-shell
+tauri_identifier: ai.nimi.apps.io.github.nimiplatform.jev-ultrafast
+package_author: Jev Ultrafast contributors
+identity_role: scaffold-generated-authoring-input

@@ -1,0 +1,22 @@
+app_id: io.github.nimiplatform.jev-ultrafast
+display_name: Jev Ultrafast
+version: 0.1.2
+profile: standalone
+manifest_role: submitted-input
+app_access:
+  - runtime.consume
+capability_contract_refs:
+  - text.decide
+  - text.generate
+required_standardized_feature_refs: []
+storage_policy:
+  kind: nimi-mediated-default
+metadata:
+  summary: A browser agent for one goal. Each step is chosen with Nimi text.decide and field text is written with Nimi text.generate, both configured in Nimi. It drives a dedicated local Chrome that it starts and stops itself; Google Chrome must be installed.
+  icon: assets/app-icon.png
+  readme: README.md
+  release_notes: RELEASE_NOTES.md
+local_development:
+  electron:
+    renderer_origin: http://127.0.0.1:1533
+    host_source_directory: src-electron

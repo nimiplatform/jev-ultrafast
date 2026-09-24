@@ -8,3 +8,11 @@ artifacts/
 *.egg-info/
 
 dist/
+
+# Nimi desktop App (Electron Host, renderer, packaged worker)
+node_modules/
+dist-electron/
+dist-electron-package/
+dist-python/
+.vite/
+.nimi/local/

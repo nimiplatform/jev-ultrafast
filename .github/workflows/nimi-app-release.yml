@@ -1,0 +1,272 @@
+name: nimi-app-release
+on:
+  pull_request:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch: {}
+permissions:
+  contents: read
+jobs:
+  prepare:
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.matrix.outputs.matrix }}
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6.3.0
+        with:
+          node-version: 24
+          package-manager-cache: false
+      - run: corepack enable
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm exec nimi-app sync
+      - run: test -z "$(git status --porcelain)"
+      - run: pnpm exec nimi-app check --json > .nimi-targets.json
+      - name: Require tag/version lockstep
+        if: github.event_name == 'push' && github.ref_type == 'tag'
+        run: node -e "const p=require('./package.json'); if (process.env.GITHUB_REF_NAME !== ('v' + p.version)) throw new Error('tag_version_mismatch')"
+      - name: Require annotated tag bound to this commit
+        if: github.event_name == 'push' && github.ref_type == 'tag'
+        shell: bash
+        run: |
+          test "$(git cat-file -t "refs/tags/$GITHUB_REF_NAME")" = tag
+          test "$(git rev-parse "refs/tags/$GITHUB_REF_NAME^{}")" = "$GITHUB_SHA"
+      - name: Require tagged commit on canonical default branch
+        if: github.event_name == 'push' && github.ref_type == 'tag'
+        env:
+          NIMI_APP_CANONICAL_BRANCH: ${{ github.event.repository.default_branch }}
+        shell: bash
+        run: |
+          test -n "$NIMI_APP_CANONICAL_BRANCH"
+          git fetch --no-tags origin "refs/heads/$NIMI_APP_CANONICAL_BRANCH:refs/remotes/origin/$NIMI_APP_CANONICAL_BRANCH"
+          git merge-base --is-ancestor "$GITHUB_SHA" "refs/remotes/origin/$NIMI_APP_CANONICAL_BRANCH"
+      - name: Run production release preflight
+        if: github.event_name == 'push' && github.ref_type == 'tag'
+        run: pnpm exec nimi-app check --production
+      - name: Require protected tags and immutable releases
+        if: github.event_name == 'push' && github.ref_type == 'tag'
+        env:
+          GH_TOKEN: ${{ secrets.NIMI_REPOSITORY_ADMIN_TOKEN }}
+        shell: bash
+        run: |
+          if test -z "$GH_TOKEN"; then
+            echo "::error title=Missing release setup::Add the repository Actions secret NIMI_REPOSITORY_ADMIN_TOKEN before publishing."
+            echo "Create a fine-grained personal access token at https://github.com/settings/personal-access-tokens/new"
+            echo "Select the repository owner and only $GITHUB_REPOSITORY. Grant repository Administration: Read-only."
+            echo "Save its value as NIMI_REPOSITORY_ADMIN_TOKEN at https://github.com/$GITHUB_REPOSITORY/settings/secrets/actions"
+            echo "Guide: https://github.com/nimiplatform/nimi/blob/main/app-tools/README.md#publishing-on-github"
+            echo "Then open this Actions run and choose Re-run failed jobs. Keep the existing tag."
+            exit 1
+          fi
+          if ! immutable=$(gh api "repos/$GITHUB_REPOSITORY/immutable-releases" --jq .enabled); then
+            echo "::error title=Release settings inaccessible::Check token expiration, repository selection, Administration: Read-only, and any required organization approval."
+            exit 1
+          fi
+          if test "$immutable" != true; then
+            echo "::error title=Immutable releases required::Enable release immutability in repository Settings > General > Releases, then re-run failed jobs."
+            exit 1
+          fi
+          protected=false
+          while read -r ruleset_id; do
+            ruleset=$(gh api "repos/$GITHUB_REPOSITORY/rulesets/$ruleset_id")
+            excluded=false
+            while read -r pattern; do
+              if [[ "refs/tags/$GITHUB_REF_NAME" == $pattern ]]; then excluded=true; break; fi
+            done < <(jq -r '.conditions.ref_name.exclude[]?' <<<"$ruleset")
+            if test "$excluded" = true; then continue; fi
+            if jq -e '(.conditions.ref_name.include | index("refs/tags/v*")) != null and ([.rules[].type] | index("update") != null and index("deletion") != null)' <<<"$ruleset" >/dev/null; then
+              protected=true
+              break
+            fi
+          done < <(gh api "repos/$GITHUB_REPOSITORY/rulesets" --jq '.[] | select(.target == "tag" and .enforcement == "active") | .id')
+          if test "$protected" != true; then
+            echo "::error title=Version tag protection required::Create an active tag ruleset for v* with Restrict updates and Restrict deletions in repository Settings > Rules > Rulesets."
+            echo "After saving the ruleset, re-run failed jobs. Do not move or replace the existing tag."
+            exit 1
+          fi
+      - name: Resolve declared target matrix
+        id: matrix
+        shell: bash
+        run: |
+          matrix=$(jq -c '{include: [.targets[] | {target: ., runner: (if . == "windows-x86_64" then "windows-latest" elif . == "macos-aarch64" then "macos-15" else error("unsupported target") end)}]}' .nimi-targets.json)
+          test "$(jq '.include | length' <<<"$matrix")" -gt 0
+          echo "matrix=$matrix" >> "$GITHUB_OUTPUT"
+  build-target:
+    needs: prepare
+    runs-on: ${{ matrix.runner }}
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJSON(needs.prepare.outputs.matrix) }}
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6.3.0
+        with:
+          node-version: 24
+          package-manager-cache: false
+      - run: corepack enable
+      - run: pnpm install --frozen-lockfile
+      - name: Test declared target
+        run: pnpm exec nimi-app test
+      - name: Build development target
+        if: github.event_name != 'push' || github.ref_type != 'tag'
+        env:
+          NIMI_APP_TARGET: ${{ matrix.target }}
+        shell: pwsh
+        run: pnpm exec nimi-app build --target $env:NIMI_APP_TARGET
+      - name: Build production target
+        if: github.event_name == 'push' && github.ref_type == 'tag'
+        env:
+          NIMI_APP_TARGET: ${{ matrix.target }}
+          NIMI_APP_PRODUCTION: true
+        shell: pwsh
+        run: pnpm exec nimi-app build --target $env:NIMI_APP_TARGET --production
+      - name: Require build to preserve the tracked source tree
+        shell: bash
+        run: test -z "$(git status --porcelain)"
+      - name: Pack development target
+        if: github.event_name != 'push' || github.ref_type != 'tag'
+        env:
+          NIMI_APP_TARGET: ${{ matrix.target }}
+        shell: pwsh
+        run: pnpm exec nimi-app pack --target $env:NIMI_APP_TARGET
+      - name: Verify native trust and pack production target
+        if: github.event_name == 'push' && github.ref_type == 'tag'
+        env:
+          NIMI_APP_TARGET: ${{ matrix.target }}
+        shell: pwsh
+        run: pnpm exec nimi-app pack --target $env:NIMI_APP_TARGET --production
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: nimi-app-${{ matrix.target }}
+          path: |
+            dist/nimi-app/*.nimiapp
+            dist/nimi-app/*.target.json
+            dist/nimi-app/*.app-info.json
+          if-no-files-found: error
+  attest-target:
+    if: github.event_name == 'push' && github.ref_type == 'tag'
+    needs: [prepare, build-target]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+      attestations: write
+      artifact-metadata: write
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJSON(needs.prepare.outputs.matrix) }}
+    steps:
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: nimi-app-${{ matrix.target }}
+          path: attest-assets
+      - uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4.2.2
+        with:
+          subject-path: attest-assets/*.nimiapp
+  aggregate:
+    needs: build-target
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6.3.0
+        with:
+          node-version: 24
+          package-manager-cache: false
+      - run: corepack enable
+      - run: pnpm install --frozen-lockfile
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          pattern: nimi-app-*
+          path: dist/nimi-app
+          merge-multiple: true
+      - run: pnpm exec nimi-app pack --aggregate
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: nimi-app-release-candidate
+          path: |
+            dist/nimi-app/*.nimiapp
+            dist/nimi-app/*.target.json
+            dist/nimi-app/*.app-info.json
+            dist/nimi-app/*.candidate.json
+          if-no-files-found: error
+  release:
+    if: github.event_name == 'push' && github.ref_type == 'tag'
+    needs: [aggregate, attest-target]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: nimi-app-release-candidate
+          path: release-assets
+      - name: Publish the immutable GitHub Release set
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+          verify_release() {
+            local verification_log
+            verification_log=$(mktemp)
+            for attempt in 1 2 3 4 5 6; do
+              if gh release verify "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" >"$verification_log" 2>&1; then
+                cat "$verification_log"
+                rm "$verification_log"
+                return 0
+              fi
+              cat "$verification_log"
+              if ! grep -q "no attestations for tag" "$verification_log" || test "$attempt" = 6; then
+                rm "$verification_log"
+                echo "::error title=Release verification failed::Inspect the error above. A published immutable Release must not be replaced; re-run failed jobs after its proof is available."
+                return 1
+              fi
+              echo "Waiting for GitHub to make the new immutable Release attestation available (attempt $attempt/6)."
+              sleep 10
+            done
+          }
+          assets=(release-assets/*.nimiapp release-assets/*.app-info.json release-assets/*.candidate.json)
+          test "${#assets[@]}" -gt 0
+          expected=$(printf '%s\n' "${assets[@]##*/}" | jq -R -s -c 'split("\n")[:-1] | sort')
+          if release_id=$(gh release view "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" --json databaseId --jq .databaseId 2>/dev/null); then
+            release_json=$(gh api "repos/$GITHUB_REPOSITORY/releases/$release_id")
+            existing=$(jq -c '.assets | map(.name) | sort' <<<"$release_json")
+            unexpected=$(jq -n --argjson existing "$existing" --argjson expected "$expected" '$existing - $expected | length')
+            test "$unexpected" -eq 0
+            if test "$(jq -r .draft <<<"$release_json")" = false; then
+              test "$existing" = "$expected"
+              verify_release
+              for asset in "${assets[@]}"; do gh release verify-asset "$GITHUB_REF_NAME" "$asset" --repo "$GITHUB_REPOSITORY"; done
+              exit 0
+            fi
+          else
+            tag_object=$(gh api "repos/$GITHUB_REPOSITORY/git/ref/tags/$GITHUB_REF_NAME" --jq .object.sha)
+            gh api "repos/$GITHUB_REPOSITORY/git/tags/$tag_object" --jq .message > release-notes.md
+            gh release create "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" --draft --verify-tag --title "$GITHUB_REF_NAME" --notes-file release-notes.md
+            release_id=$(gh release view "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" --json databaseId --jq .databaseId)
+            release_json=$(gh api "repos/$GITHUB_REPOSITORY/releases/$release_id")
+          fi
+          verify_dir=$(mktemp -d)
+          for asset in "${assets[@]}"; do
+            name=$(basename "$asset")
+            if jq -e --arg name "$name" '.assets[] | select(.name == $name)' <<<"$release_json" >/dev/null; then
+              gh release download "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" --pattern "$name" --dir "$verify_dir"
+              cmp "$asset" "$verify_dir/$name"
+            else
+              gh release upload "$GITHUB_REF_NAME" "$asset" --repo "$GITHUB_REPOSITORY"
+            fi
+          done
+          gh release edit "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" --draft=false
+          verify_release
+          for asset in "${assets[@]}"; do gh release verify-asset "$GITHUB_REF_NAME" "$asset" --repo "$GITHUB_REPOSITORY"; done

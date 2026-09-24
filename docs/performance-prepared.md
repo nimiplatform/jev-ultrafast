@@ -1,3 +1,10 @@
+> [!NOTE]
+> **Upstream history, not a Nimi metric.** These figures come from the upstream TypeSafe-direct build
+> (one combined operation/target request per decision, keys held by Python, the user's Chrome profile).
+> The Nimi adaptation asks one or two `text.decide` calls per decision through the Host in a dedicated
+> Chrome; it has no end-to-end model measurement yet (NOT-VERIFIED). The live and recording scripts named
+> here are in the upstream repository history.
+
 # A real flight search, at real speed
 
 **12.884 seconds on Google Flights.** Zürich → London, one way, Sunday 20 September 2026, one adult, economy. Historical prepared recording (the primary demo has since been replaced) · [Machine-readable evidence](flights-prepared-measurement.json).

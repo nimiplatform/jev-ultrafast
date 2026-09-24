@@ -1,0 +1,15 @@
+build_profile_ref: electron-pnpm
+profile_role: developer-workflow-input
+test_command: pnpm run test:app
+build_command: pnpm run build:electron:production
+output_path: dist-electron-package
+lockfile_path: pnpm-lock.yaml
+lockfile_policy: author-install-generates-lockfile
+ci_install_command: pnpm install --frozen-lockfile
+targets:
+  windows-x86_64:
+    os: windows
+    arch: x86_64
+    build_command: pnpm run build:electron:production
+    payload_path: dist-electron-package/jev-ultrafast-shell-win32-x64
+    runtime_entry: payload/jev-ultrafast-shell.exe

@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
+<!-- App icon source for app-icon.png: the browser card from docs/banner.svg, squared. -->
+<rect width="512" height="512" rx="112" fill="#f5f5ed"/>
+<g fill="none" stroke="#ed784c" stroke-linecap="round" stroke-width="14"><path d="M44 214H100M28 256H92M48 298H96"/></g>
+<g transform="rotate(-4 290 260)">
+<rect x="116" y="118" width="344" height="284" rx="22" fill="#fff" stroke="#263c2a" stroke-width="8"/>
+<path d="M116 172H460" stroke="#263c2a" stroke-width="6"/>
+<circle cx="150" cy="145" r="9" fill="#d9dece"/><circle cx="180" cy="145" r="9" fill="#d9dece"/><circle cx="210" cy="145" r="9" fill="#d9dece"/>
+<g fill="none" stroke="#c1cab6" stroke-width="5"><rect x="144" y="226" width="84" height="84" rx="8"/><rect x="348" y="226" width="84" height="84" rx="8"/></g>
+<rect x="242" y="220" width="92" height="96" rx="10" fill="#edf4df" stroke="#4b7948" stroke-width="7"/>
+<rect x="244" y="200" width="46" height="26" rx="6" fill="#4b7948"/>
+<path d="M292 264L309 328L323 305L356 305Z" fill="#ea7345" stroke="#a64424" stroke-width="5" stroke-linejoin="round"/>
+<path d="M144 350H304M144 376H404" stroke="#d9e1cf" stroke-width="10" stroke-linecap="round"/>
+</g>
+</svg>

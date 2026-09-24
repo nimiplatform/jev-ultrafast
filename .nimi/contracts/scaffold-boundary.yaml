@@ -1,0 +1,4 @@
+scaffold_contract: P-SCAF
+profile: standalone
+public_admission_truth: not-generated
+developer_release_input: candidate-only

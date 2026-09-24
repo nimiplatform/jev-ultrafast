@@ -6,21 +6,27 @@ import sys
 import time
 from pathlib import Path
 
-from browser_harness.admin import ensure_daemon
-from browser_harness.helpers import cdp
+from . import harness
 
 # Atomically read visible content and controls, preserving actual DOM node identity.
-READ_STATE = Path(__file__).with_name("snapshot.js").read_text()
+READ_STATE = Path(__file__).with_name("snapshot.js").read_text(encoding="utf-8")
 MARKER = f"(() => {{ const state={READ_STATE}; return state?.marker ?? null; }})()"
+
+
+def cdp(method, session_id=None, **params):
+    """Raw CDP through this process's dedicated Browser Harness daemon; refuses any other connection."""
+    return harness.cdp(method, session_id=session_id, **params)
+
 
 class StalePage(ValueError):
     """A decision no longer refers to the observed page."""
 
 
 class Browser:
-    def __init__(self, url):
-        ensure_daemon()
-        self.target = cdp("Target.createTarget", url="about:blank", background=True)["targetId"]
+    def __init__(self, url, *, background=True):
+        # The dedicated automation Chrome and its daemon must already be running (see chrome.DedicatedBrowser).
+        # background=False shows the owned tab in that window; focus emulation keeps rendering either way.
+        self.target = cdp("Target.createTarget", url="about:blank", background=background)["targetId"]
         self.session = cdp("Target.attachToTarget", targetId=self.target, flatten=True)["sessionId"]
         self.call("Emulation.setDeviceMetricsOverride", width=1120, height=780, deviceScaleFactor=1, mobile=False)
         # Keep rAF/menus rendering in an owned background tab, without activating the user's Chrome tab.
@@ -107,9 +113,9 @@ class Browser:
         return result
 
     def close(self):
-        if self.target:
-            cdp("Target.closeTarget", targetId=self.target)
-            self.target = None
+        target, self.target = self.target, None
+        if target:
+            cdp("Target.closeTarget", targetId=target)
 
 
 def fingerprint(state):
