@@ -122,7 +122,7 @@ function execute(spec, { signal, timeoutMs }) {
 const checks = {};
 const timings = {};
 const userChromeBefore = processes('chrome.exe').filter((p) => !p.line.toLowerCase().includes(tempRoot.toLowerCase()));
-const host = new WorkerHost({ launch, tempRoot, execute, log: (line) => logs.push(line) });
+const host = new WorkerHost({ launch, tempRoot, prepareSession: async () => undefined, execute, log: (line) => logs.push(line) });
 let failure = null;
 try {
   const expect = (reply, name) => {

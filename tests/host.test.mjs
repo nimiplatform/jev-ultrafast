@@ -52,13 +52,14 @@ const abortedError = () => Object.assign(new Error('Local-app scenario execution
   name: 'NimiError', code: 'OPERATION_ABORTED', reasonCode: 'OPERATION_ABORTED',
 });
 
-function createHost(mode, execute) {
+function createHost(mode, execute, prepareSession = async () => undefined) {
   const calls = [];
   const states = [];
   const logs = [];
   const host = new WorkerHost({
     launch: { executable: process.execPath, args: [fakeWorker, mode], cwd: tempRoot, missingHint: 'missing' },
     tempRoot,
+    prepareSession,
     execute: execute ?? (async (spec, options) => {
       calls.push({ spec, options });
       return spec.type === 'text-decide' ? DECIDE_RESULT : GENERATE_RESULT;
@@ -70,6 +71,34 @@ function createHost(mode, execute) {
 }
 
 const runDirs = () => readdirSync(tempRoot).filter((name) => name.startsWith('jevu-'));
+
+test('session preparation failure never dispatches or replays a browser command', async () => {
+  let attempts = 0;
+  const { host } = createHost('normal', undefined, async () => {
+    attempts += 1;
+    throw Object.assign(new Error('Runtime unavailable'), { reasonCode: 'runtime-service-unavailable' });
+  });
+  const reply = await host.command({ name: 'start', body: { url: 'https://example.com', goal: GOAL } });
+  assert.equal(reply.ok, false);
+  assert.equal(reply.error.code, 'runtime-service-unavailable');
+  assert.equal(attempts, 1);
+  assert.equal(host.running, false);
+});
+
+test('Stop and session invalidation discard commands still preparing', async () => {
+  for (const action of ['stop', 'invalidate']) {
+    let ready;
+    const { host } = createHost('normal', undefined, async () => new Promise(resolve => { ready = resolve; }));
+    const pending = host.command({ name: 'start', body: { url: 'https://example.com', goal: GOAL } });
+    if (action === 'stop') await host.command({ name: 'stop', body: {} });
+    else host.invalidateSession();
+    ready();
+    const reply = await pending;
+    assert.equal(reply.ok, false);
+    assert.equal(reply.error.code, 'stopped');
+    assert.equal(host.running, false);
+  }
+});
 
 test('the renderer transport and the Host agree on the command and event names', () => {
   assert.equal(renderer.WORKER_COMMAND, WORKER_COMMAND);
@@ -283,6 +312,7 @@ test('a missing worker executable is reported, not retried silently', async () =
   const host = new WorkerHost({
     launch: { executable: path.join(tempRoot, 'missing.exe'), args: [], cwd: tempRoot, missingHint: 'Build the worker.' },
     tempRoot,
+    prepareSession: async () => undefined,
     execute: async () => { throw new Error('unused'); },
   });
   const reply = await host.command({ name: 'state', body: {} });

@@ -68,6 +68,10 @@ void app.whenReady().then(async () => {
   const host = new WorkerHost({
     launch: workerLaunch,
     tempRoot,
+    prepareSession: async (signal) => {
+      if (!bridge) throw new Error('The Nimi App bridge is not registered.');
+      await bridge.prepareSession(signal);
+    },
     execute: (spec, options) => {
       if (!bridge) throw new Error('The Nimi App bridge is not registered.');
       return bridge.services.ai.scenario.execute(spec, options);

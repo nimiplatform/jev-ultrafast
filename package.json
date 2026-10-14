@@ -29,18 +29,18 @@
     "dev:electron": "nimi-app dev --shell electron"
   },
   "dependencies": {
-    "@nimiplatform/sdk": "^0.18.1",
-    "@nimiplatform/kit": "^0.15.3"
+    "@nimiplatform/sdk": "^0.21.0",
+    "@nimiplatform/kit": "^0.18.1"
   },
   "devDependencies": {
     "@electron/packager": "^20.3.0",
     "@types/node": "^24.13.3",
-    "electron": "^42.10.1",
+    "electron": "^44.5.1",
     "esbuild": "^0.28.2",
     "typescript": "^5.9.3",
     "vite": "^7.3.6",
     "yaml": "^2.9.0",
     "@nimiplatform/app-tools": "^0.11.4",
-    "@nimiplatform/nimi-coding": "0.6.3"
+    "@nimiplatform/nimi-coding": "0.6.5"
   }
 }

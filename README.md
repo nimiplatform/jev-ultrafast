@@ -173,14 +173,10 @@ scripted fake worker (`tests/fixtures/fake-worker.mjs`).
 ### Nimi desktop App
 
 Requires Node 24 with pnpm 10, the project `.venv` above, Google Chrome, and a Nimi Desktop that supervises
-App-owned renderer commands. The SDK, Kit and app-tools come from the local package archives pinned in
-`pnpm-workspace.yaml` and `pnpm-lock.yaml`.
-
-The current Nimi package overrides point to local tarballs outside this repository. These exact package
-versions are not available from the public npm registry yet, so a fresh checkout (including GitHub Actions)
-cannot complete `pnpm install` from this commit alone. The commands below are verified with the local
-tarballs; release CI and a registry-only install remain **NOT-VERIFIED** until the packages are published
-and the lockfile is regenerated with registry resolutions.
+App-owned renderer commands. SDK 0.21.0, Kit/native 0.18.1, App Tools 0.11.4 and Nimi Coding 0.6.5 now resolve
+from the public registries. The lockfile pins the selected packages, and Electron 44 provides the Host.
+No Nimi source checkout or local package archives are required. App release CI and real browser-agent
+acceptance are separate checks; a dependency install does not establish either result.
 
 ```bash
 pnpm install                     # also installs the Electron binary (install-electron --no)
@@ -208,6 +204,16 @@ keys inside Python and are not part of this adaptation; they remain in the upstr
 
 ## Evidence and limits
 
+### Deferred decision-quality issue (2026-10-11)
+
+The current local Laya model selected DONE before typing `Nimi` into Wikipedia's search field. The page did not satisfy the goal. This remains a model/App decision-quality issue to investigate separately; the user explicitly deferred it while VoiceStudio cloud speech and OpenWhispr test migration are repaired. No prompt tuning, model replacement, site-specific rules or completion bypass is included in that repair scope.
+
+On 2026-10-12 the user reaffirmed that this decision-quality issue remains deferred while MiMo Runtime tool-text support is repaired; no model-quality code was changed.
+
+### Verification history
+
+- **Technical-session recovery:** explicit new worker commands prepare the Kit session before dispatch; Stop, shutdown and invalidation abort pending preparation. No failed command is replayed. The 18 Host protocol tests and typecheck/build/check passed. After a real Runtime restart, a new explicit Choose next obtained another real decision in the same supervised Host.
+- **Published packages (2026-10-11, Windows development):** SDK 0.21.0, Kit/native 0.18.1 and App Tools 0.11.4 resumed the existing Desktop-supervised registration. A real local decision selected CLICK on example.com's only link, then DONE after reaching `https://www.iana.org/help/example-domains`; the actual destination page was visually verified. Navigation interrupted the first post-click observation, so an explicit subsequent Choose next observed the destination without replaying the click. The history now labels that unobserved immediate result honestly instead of claiming no change. The five renderer checks and syntax check passed; prior package-upgrade tests/type checks/Host build remain applicable. A second real goal, typing `Nimi` into Wikipedia's search field without submitting, did not succeed: the model selected DONE before any action, so the text helper was not exercised. This is a recorded model decision failure, not a passing task. New-package text-generation execution, installed operation and broader sites remain **NOT-VERIFIED**.
 - **Nimi runs with a local decision model (2026-09-24, Windows 11, RTX 5090)**: Decisions = Laya browser
   steps (v10s), Text generation = Gemma 4 E2B, both on this device, in the Desktop-supervised development App
   and the locally imported installed App. Each step asks one or two `text.decide` questions (about 0.6-1.2 s

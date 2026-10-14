@@ -1,5 +1,12 @@
 # Platform upgrade
 
+Before first fresh init, an App may explicitly select another combination listed
+by the installed tool in package.json. Init verifies the original generated
+sources, preserves immutable identity and direct features, and projects the
+selected pair into derived intent, glue and lock. Fresh create still uses the
+tool default; do not edit intent or lock by hand. Unlisted pairs fail before
+owner mutations.
+
 App Tools 0.9 requires the Host-profile contract in Kit 0.13: select SDK
 `^0.16.0` and Kit `^0.13.0` before sync. Older combinations are rejected before
 files or owner projections change. There is no old-template or default-profile
@@ -12,6 +19,8 @@ Install the target app-tools and its exact nimi-coding first. The App-local nimi
 Review App-owned instructions outside managed blocks when the upgrade changes an ownership boundary or command. Correct obsolete routing against the current owner; adding another conflicting paragraph is not a migration of those instructions.
 
 Upgrading app-tools does not by itself move an existing App's SDK/Kit combination: sync preserves a supported combination and check rejects an unlisted SDK x Kit pairing rather than normalizing it. Selecting a new SDK/Kit combination is a deliberate App decision. When it is made, migrate the affected App-owned API uses, run sync, then install the full normalized dependency set and regenerate the package-manager lockfile. Run check and the relevant tests/build and real journey. Fresh scaffold identity and direct features remain fixed; the tool updates derived version/matrix projections. Existing Apps continue without a fresh lock.
+
+A scaffold from an app-tools version that still managed `LICENSE` hands it to the App on the next sync: the file stays byte for byte, the lock records the App as owner, sync reports the handover and adds `licenses/nimi-app-template.txt`, and check asks for that sync first. Replace a license that still names the template holder with the App's own terms.
 
 For existing Apps, sync preserves the exact `package.json` text when its managed values are already current. A project formatter's whitespace or key ordering alone is not drift; actual managed value changes are still synchronized.
 

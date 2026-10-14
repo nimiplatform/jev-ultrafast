@@ -58,6 +58,7 @@ export type WorkerHostOptions = {
   readonly launch: WorkerLaunch;
   /** Parent of the per-run directories, e.g. Electron's app.getPath('temp') bound to the Host profile. */
   readonly tempRoot: string;
+  readonly prepareSession: (signal: AbortSignal) => Promise<void>;
   readonly execute: ScenarioExecute;
   readonly onState?: (state: JsonObject) => void;
   readonly log?: (message: string) => void;
@@ -527,6 +528,7 @@ export class WorkerHost {
   #exitCode = 'worker_exited';
   #exitReason = '';
   #lastState: JsonObject | null = null;
+  readonly #preparations = new Set<AbortController>();
 
   constructor(options: WorkerHostOptions) {
     this.#options = options;
@@ -549,6 +551,21 @@ export class WorkerHost {
       return failure('invalid_command', describeError(error));
     }
     const { name, body } = command;
+    if (name === 'stop' || name === 'close') this.#abortPreparations();
+    if (name !== 'state' && name !== 'stop' && name !== 'close') {
+      const preparation = new AbortController();
+      this.#preparations.add(preparation);
+      try {
+        await this.#options.prepareSession(preparation.signal);
+        preparation.signal.throwIfAborted();
+      } catch (error) {
+        if (preparation.signal.aborted) return failure('stopped', 'Stopped before the command started.');
+        const detail = aiErrorPayload(error);
+        return failure(detail.code, detail.message);
+      } finally {
+        this.#preparations.delete(preparation);
+      }
+    }
     let worker = this.#live();
     if (!worker) {
       if (name === 'stop' || name === 'close') {
@@ -578,6 +595,7 @@ export class WorkerHost {
 
   /** The protected session changed: stop the running decision or loop and abort its AI requests. */
   invalidateSession(): void {
+    this.#abortPreparations();
     const worker = this.#live();
     if (!worker) return;
     void this.#send(worker, 'stop', {});
@@ -586,6 +604,7 @@ export class WorkerHost {
 
   /** Close the worker (it closes its Chrome and daemon), terminate it if it does not exit, clean up. */
   async shutdown(timeoutMs = CLOSE_TIMEOUT_MS): Promise<void> {
+    this.#abortPreparations();
     const worker = this.#worker;
     if (!worker) return;
     if (!worker.exited) {
@@ -599,6 +618,10 @@ export class WorkerHost {
       }
     }
     await worker.done;
+  }
+
+  #abortPreparations(): void {
+    for (const preparation of this.#preparations) preparation.abort();
   }
 
   #live(): WorkerProcess | null {
