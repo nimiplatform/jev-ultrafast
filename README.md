@@ -216,6 +216,27 @@ venv pip. The product itself never installs its worker dependencies on launch.
 No model prompt, decision threshold, site-specific rule or DONE verification
 was changed. Old 0.1.2 local-import data and packages remain separate.
 
+The current combination passes 112 Python tests, 27 Node tests, syntax/type
+checks, frozen installation, production build and production pack. The frozen
+worker check starts its own real Chrome, verifies Unicode text transport and
+Stop/cleanup, and preserves user Chrome; its model answers are scripted, so it
+is packaging/protocol evidence only.
+
+On the locally installed Nimi 0.2.5-rc.2 fixed service, a separate supervised
+development registration completed a real custom task: start at example.com,
+open its information link, and stop at the IANA Example Domains page. Two
+actual Nimi decision calls selected CLICK (207 ms) and DONE (235 ms); each was
+executed through the product controls. The actual destination URL and page
+were independently observed. The App correctly retained `verification.passed`
+as null for a custom goal; the model's DONE was not promoted to an automatic
+verification. Product export saved the 29,115-byte trace at
+`.nimi/local/acceptance-0.1.3/example-domain-trace.json`. Normal App close removed
+the dedicated Chrome processes. These call timings are not a speed/reliability
+claim. No text-helper call occurred, so live text generation with this package
+combination remains NOT-VERIFIED; the previously deferred decision-quality
+issues are unchanged. Installed-package/Catalog acceptance and other platforms
+remain separate. Nimi 0.2.5-rc.2 is a local candidate, not a public Nimi release.
+
 The publisher declaration is general-audience and includes unmoderated web
 content. The agent can type model-generated text and click a submit control on
 a task website without a separate confirmation for each action, so its text
