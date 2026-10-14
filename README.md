@@ -205,16 +205,24 @@ keys inside Python and are not part of this adaptation; they remain in the upstr
 
 ## Evidence and limits
 
-### Windows delivery preparation (2026-10-15)
+### Windows delivery (2026-10-15)
 
 The earlier uncommitted dependency/session work is preserved in `007bb31`.
-Current 0.1.3 preparation uses the published package combination above and
+Current 0.1.3 uses the published package combination above and
 retains the existing decision loop. Tests and production builds explicitly
 prepare the project-local Python environment with pinned uv; PyInstaller and
 its hooks are in the frozen uv lock rather than installed through an assumed
 venv pip. The product itself never installs its worker dependencies on launch.
 No model prompt, decision threshold, site-specific rule or DONE verification
 was changed. Old 0.1.2 local-import data and packages remain separate.
+
+[0.1.3](https://github.com/nimiplatform/jev-ultrafast/releases/tag/v0.1.3) is now
+published through the protected tag workflow after a successful full branch
+build. Registry preparation verified the exact license, digest and build
+provenance; [PR 110](https://github.com/nimiplatform/nimi-app-registry/pull/110)
+passed candidate checks and awaits its explicit human admission decision for
+Windows x86_64 / stable. No Catalog install or installed business result is
+inferred from that publication.
 
 The current combination passes 112 Python tests, 27 Node tests, syntax/type
 checks, frozen installation, production build and production pack. The frozen
