@@ -17,8 +17,7 @@ const run = (args) => execFileSync(python, args, { cwd: root, env, stdio: 'inher
 
 const installed = spawnSync(python, ['-m', 'PyInstaller', '--version'], { cwd: root, env, encoding: 'utf8', windowsHide: true });
 if (installed.status !== 0 || installed.stdout.trim() !== PYINSTALLER[0].split('==')[1]) {
-  // Build tooling only, installed into the project venv; it is not an App dependency.
-  run(['-m', 'pip', 'install', '--disable-pip-version-check', ...PYINSTALLER]);
+  throw new Error('The pinned worker build tools are missing; run pnpm setup:worker.');
 }
 
 const work = path.join(root, '.nimi', 'local', 'pyinstaller');

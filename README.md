@@ -173,13 +173,14 @@ scripted fake worker (`tests/fixtures/fake-worker.mjs`).
 ### Nimi desktop App
 
 Requires Node 24 with pnpm 10, the project `.venv` above, Google Chrome, and a Nimi Desktop that supervises
-App-owned renderer commands. SDK 0.21.0, Kit/native 0.18.1, App Tools 0.11.4 and Nimi Coding 0.6.5 now resolve
+App-owned renderer commands. SDK 0.21.0, Kit/native 0.21.0, App Tools 0.13.1 and Nimi Coding 0.6.5 now resolve
 from the public registries. The lockfile pins the selected packages, and Electron 44 provides the Host.
 No Nimi source checkout or local package archives are required. App release CI and real browser-agent
 acceptance are separate checks; a dependency install does not establish either result.
 
 ```bash
 pnpm install                     # also installs the Electron binary (install-electron --no)
+pnpm setup:worker                # pinned Python 3.12.13, locked worker/test/build environment
 pnpm dev                         # Nimi Desktop supervises the Host; renderer: dev:renderer on http://127.0.0.1:1533
 pnpm test                        # nimi-app test: ruff, pytest, Node tests, syntax checks
 pnpm typecheck
@@ -203,6 +204,25 @@ The upstream live examples, measurement and recording scripts and the HTTP inspe
 keys inside Python and are not part of this adaptation; they remain in the upstream history.
 
 ## Evidence and limits
+
+### Windows delivery preparation (2026-10-15)
+
+The earlier uncommitted dependency/session work is preserved in `007bb31`.
+Current 0.1.3 preparation uses the published package combination above and
+retains the existing decision loop. Tests and production builds explicitly
+prepare the project-local Python environment with pinned uv; PyInstaller and
+its hooks are in the frozen uv lock rather than installed through an assumed
+venv pip. The product itself never installs its worker dependencies on launch.
+No model prompt, decision threshold, site-specific rule or DONE verification
+was changed. Old 0.1.2 local-import data and packages remain separate.
+
+The publisher declaration is general-audience and includes unmoderated web
+content. The agent can type model-generated text and click a submit control on
+a task website without a separate confirmation for each action, so its text
+exposure is declared publishable with automatic publication control. This adds
+no permission or new sending behavior. Website accounts may be needed for some
+tasks; the App still uses only its dedicated temporary Chrome profile, never
+the user's existing browser or its saved credentials.
 
 ### Deferred decision-quality issue (2026-10-11)
 

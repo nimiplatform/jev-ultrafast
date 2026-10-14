@@ -1,6 +1,6 @@
 app_id: io.github.nimiplatform.jev-ultrafast
 display_name: Jev Ultrafast
-version: 0.1.2
+version: 0.1.3
 profile: standalone
 manifest_role: submitted-input
 app_access:
@@ -20,3 +20,27 @@ local_development:
   electron:
     renderer_origin: http://127.0.0.1:1533
     host_source_directory: src-electron
+safety_profile:
+  intended_audience: general
+  content_descriptors:
+    - unmoderated-shared-content
+  ai:
+    direct_interaction: true
+    interaction_notice: absent
+    risk_features: []
+    subject_notice: not-applicable
+    outputs:
+      - modality: text
+        exposure: publishable
+        publication_control: automatic
+        in_product_notice: absent
+        export_visible_marking: absent
+        machine_readable_marking: absent
+  data_practices:
+    publisher_direct_external_network: true
+    telemetry: []
+    third_party_account: optional
+    user_content_sharing: public
+    commercial_features: []
+    sensitive_data_categories: []
+  high_impact_decision_uses: []

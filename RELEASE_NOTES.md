@@ -1,5 +1,14 @@
 # Release notes
 
+## 0.1.3
+
+- Uses published Nimi SDK/Kit 0.21.0 and App Tools 0.13.1 with Electron 44 on Windows.
+- Prepares the protected technical session before new worker commands, preserving Stop and avoiding replay after a failed preparation.
+- Distinguishes an unobserved browser result from an observed unchanged page.
+- Sets up pinned Python 3.12.13 and locked worker/build dependencies for clean CI runners. The App still uses only its dedicated Chrome profile.
+
+Model decision quality remains a separate, deferred issue. A model's DONE response is not proof of task completion, and the existing browser-surface limitations remain.
+
 ## 0.1.2
 
 - Reaching the run's action or decision budget ends the run and says which budget; the controls no longer
