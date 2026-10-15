@@ -220,9 +220,8 @@ was changed. Old 0.1.2 local-import data and packages remain separate.
 published through the protected tag workflow after a successful full branch
 build. Registry preparation verified the exact license, digest and build
 provenance; [PR 110](https://github.com/nimiplatform/nimi-app-registry/pull/110)
-passed candidate checks and awaits its explicit human admission decision for
-Windows x86_64 / stable. No Catalog install or installed business result is
-inferred from that publication.
+passed candidate/finalization checks and merged after explicit human approval
+for Windows x86_64 / stable with the recorded limits.
 
 The current combination passes 112 Python tests, 27 Node tests, syntax/type
 checks, frozen installation, production build and production pack. The frozen
@@ -242,8 +241,21 @@ verification. Product export saved the 29,115-byte trace at
 the dedicated Chrome processes. These call timings are not a speed/reliability
 claim. No text-helper call occurred, so live text generation with this package
 combination remains NOT-VERIFIED; the previously deferred decision-quality
-issues are unchanged. Installed-package/Catalog acceptance and other platforms
-remain separate. Nimi 0.2.5-rc.2 is a local candidate, not a public Nimi release.
+issues are unchanged. Nimi 0.2.5-rc.2 is a local candidate, not a public Nimi release.
+
+Home subsequently downloaded and installed the actual 0.1.3 Catalog release.
+The installed Host and frozen worker completed the same real browser task: CLICK
+(213 ms), then DONE (191 ms), with the IANA URL and Example Domains page
+independently observed. Navigation interrupted the immediate post-click
+observation; an explicit Choose next recovered without replaying the click,
+and history honestly retained Result not observed for that immediate result.
+The native Save dialog exported the 29,097-byte
+`.nimi/local/acceptance-0.1.3/catalog-example-domain-trace.json`; it contains
+two real decisions, no text-helper call, and `verification.passed: null`.
+Normal App exit removed its dedicated browser. Catalog download/install,
+launch, bounded decision use, export and cleanup pass. Live text-helper use,
+future-version update, uninstall and macOS remain NOT-VERIFIED. This bounded
+result does not resolve the separately recorded model-quality issues.
 
 The publisher declaration is general-audience and includes unmoderated web
 content. The agent can type model-generated text and click a submit control on
