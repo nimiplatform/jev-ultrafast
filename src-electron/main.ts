@@ -38,6 +38,8 @@ const IS_PRODUCTION_BUNDLE = __NIMI_ELECTRON_PRODUCTION__;
 // bundling changes the source directory base.
 const currentDir = path.dirname(fileURLToPath(import.meta.url));
 const appRoot = path.resolve(currentDir, '..');
+// Native presentation is separate from metadata.icon artwork shown in Nimi Home.
+const nativeAppIconPath = path.join(appRoot, 'assets', 'native', process.platform === 'win32' ? 'windows.ico' : process.platform === 'darwin' ? 'macos.png' : 'app.png');
 const preloadPath = path.join(currentDir, 'preload.cjs');
 const productionRendererUrl = pathToFileURL(path.join(appRoot, 'dist', 'index.html')).toString();
 const developmentRendererUrl = readDevelopmentRendererUrl();
@@ -62,6 +64,7 @@ let workerHost: InstanceType<typeof WorkerHost> | null = null;
 let quitting = false;
 
 void app.whenReady().then(async () => {
+  if (process.platform === 'darwin' && !app.isPackaged) app.dock?.setIcon(nativeAppIconPath);
   const tempRoot = app.getPath('temp');
   void sweepStaleRunDirs(tempRoot, log);
   let bridge: ReturnType<typeof registerNimiElectronAppBridge> | null = null;
@@ -132,6 +135,7 @@ app.on('before-quit', (event) => {
 
 async function createMainWindow(): Promise<void> {
   const window = new BrowserWindow({
+    icon: nativeAppIconPath,
     width: 1320,
     height: 900,
     minWidth: 720,

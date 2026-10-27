@@ -14,7 +14,6 @@ storage_policy:
 metadata:
   summary: A browser agent for one goal. Each step is chosen with Nimi text.decide and field text is written with Nimi text.generate, both configured in Nimi. It drives a dedicated local Chrome that it starts and stops itself; Google Chrome must be installed.
   icon: assets/app-icon.png
-  readme: README.md
   release_notes: RELEASE_NOTES.md
 local_development:
   electron:

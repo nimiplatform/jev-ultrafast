@@ -7,7 +7,7 @@
   "type": "module",
   "main": "dist-electron/main.js",
   "license": "MIT",
-  "packageManager": "pnpm@10.34.5",
+  "packageManager": "pnpm@10.34.7",
   "scripts": {
     "postinstall": "install-electron --no",
     "dev": "nimi-app dev --shell electron",
@@ -30,13 +30,13 @@
     "dev:electron": "nimi-app dev --shell electron"
   },
   "dependencies": {
-    "@nimiplatform/kit": "^0.21.0",
-    "@nimiplatform/sdk": "^0.21.0"
+    "@nimiplatform/kit": "^0.22.1",
+    "@nimiplatform/sdk": "^0.22.2"
   },
   "devDependencies": {
     "@electron/packager": "^20.3.0",
-    "@nimiplatform/app-tools": "^0.13.1",
-    "@nimiplatform/nimi-coding": "0.6.5",
+    "@nimiplatform/app-tools": "^0.14.0",
+    "@nimiplatform/nimi-coding": "0.7.0",
     "@types/node": "^24.13.3",
     "electron": "^44.5.1",
     "esbuild": "^0.28.2",

@@ -143,7 +143,9 @@ try {
   await cp(nativePackageRoot, nativeDestination, { recursive: true, dereference: true, force: false });
   await mkdir(packagerTempRoot, { recursive: true });
 
+  await cp(path.join(appRoot, 'assets', 'native'), path.join(productionSourceRoot, 'assets', 'native'), { recursive: true });
   const packagePaths = await packager({
+    icon: path.join(appRoot, 'assets', 'native', MACOS_BUILD ? 'macos.icns' : 'windows.ico'),
     dir: productionSourceRoot,
     platform: NATIVE_PLATFORM,
     arch: NATIVE_ARCH,
